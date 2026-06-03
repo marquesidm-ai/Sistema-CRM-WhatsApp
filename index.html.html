@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Sistema CRM WhatsApp</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Arial, sans-serif;
+    background:#f4f4f4;
+    padding:20px;
+}
+
+.container{
+    max-width:1400px;
+    margin:auto;
+    background:white;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+h1{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+.topo{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:15px;
+    margin-bottom:20px;
+}
+
+.card{
+    background:#28a745;
+    color:white;
+    padding:20px;
+    border-radius:10px;
+    text-align:center;
+}
+
+.card h2{
+    font-size:35px;
+}
+
+.formulario{
+    display:grid;
+    grid-template-columns:1fr 1fr auto;
+    gap:10px;
+    margin-bottom:20px;
+}
+
+input,
+textarea,
+select{
+    padding:12px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    font-size:16px;
+    width:100%;
+}
+
+textarea{
+    min-height:120px;
+    resize:vertical;
+}
+
+button{
+    padding:12px 20px;
+    border:none;
+    border-radius:6px;
+    color:white;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+button:hover{
+    opacity:0.9;
+}
+
+.btn-salvar{
+    background:#28a745;
+}
+
+.btn-editar{
+    background:#007bff;
+}
+
+.btn-excluir{
+    background:#dc3545;
+}
+
+.btn-whatsapp{
+    background:#25D366;
+}
+
+.btn-campanha{
+    background:#6f42c1;
+}
+
+.btn-exportar{
+    background:#fd7e14;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+}
+
+table th,
+table td{
+    border:1px solid #ddd;
+    padding:12px;
+    text-align:left;
+}
+
+table th{
+    background:#28a745;
+    color:white;
+}
+
+.preview-container{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:15px;
+}
+
+.preview{
+    width:100px;
+    border-radius:10px;
+    border:2px solid #ddd;
+}
+
+.acoes{
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px;
+}
+
+.campanha-box{
+    background:#fafafa;
+    padding:20px;
+    border-radius:10px;
+    margin-top:20px;
+}
+
+@media(max-width:768px){
+
+    .formulario{
+        grid-template-columns:1fr;
+    }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Sistema CRM WhatsApp</h1>
+
+<div class="topo">
+
+<div class="card">
+    <h2 id="totalClientes">0</h2>
+    <p>Total de Clientes</p>
+</div>
+
+<div class="card">
+    <h2 id="totalCampanhas">0</h2>
+    <p>Campanhas Criadas</p>
+</div>
+
+</div>
+
+<div class="formulario">
+
+<input type="text" id="nome" placeholder="Nome do Cliente">
+
+<input type="text" id="whatsapp" placeholder="WhatsApp">
+
+<button class="btn-salvar" onclick="salvarCliente()">
+Salvar Cliente
+</button>
+
+</div>
+
+<div class="campanha-box">
+
+<h2 style="margin-bottom:15px;">
+Criar Campanha
+</h2>
+
+<input type="text" id="nomeCampanha" placeholder="Nome da Campanha">
+
+<br><br>
+
+<textarea id="mensagemCampanha" placeholder="Digite a mensagem da campanha"></textarea>
+
+<br>
+
+<input type="file" id="imagens" accept="image/*" multiple>
+
+<div class="preview-container" id="previewContainer"></div>
+
+<br>
+
+<button class="btn-campanha" onclick="salvarCampanha()">
+Salvar Campanha
+</button>
+
+</div>
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>ID</th>
+<th>Nome</th>
+<th>WhatsApp</th>
+<th>Ações</th>
+
+</tr>
+
+</thead>
+
+<tbody id="tabelaClientes"></tbody>
+
+</table>
+
+</div>
+
+<script>
+
+// CLIENTES
+
+let banco = JSON.parse(localStorage.getItem("clientes_db")) || [];
+
+// CAMPANHAS
+
+let campanhas = JSON.parse(localStorage.getItem("campanhas_db")) || [];
+
+let imagensSelecionadas = [];
+
+let editando = null;
+
+// SALVAR LOCAL
+
+function atualizarBanco(){
+
+    localStorage.setItem(
+        "clientes_db",
+        JSON.stringify(banco)
+    );
+
+}
+
+function atualizarCampanhas(){
+
+    localStorage.setItem(
+        "campanhas_db",
+        JSON.stringify(campanhas)
+    );
+
+}
+
+// DASHBOARD
+
+function atualizarDashboard(){
+
+    document.getElementById("totalClientes").innerText = banco.length;
+
+    document.getElementById("totalCampanhas").innerText = campanhas.length;
+
+}
+
+// RENDERIZAR CLIENTES
+
+function renderizarTabela(){
+
+    const tabela = document.getElementById("tabelaClientes");
+
+    tabela.innerHTML = "";
+
+    banco.forEach((cliente,index)=>{
+
+        tabela.innerHTML += `
+
+        <tr>
+
+            <td>${cliente.id}</td>
+
+            <td>${cliente.nome}</td>
+
+            <td>${cliente.whatsapp}</td>
+
+            <td>
+
+                <div class="acoes">
+
+                    <button class="btn-editar" onclick="editarCliente(${index})">
+                    Editar
+                    </button>
+
+                    <button class="btn-excluir" onclick="excluirCliente(${index})">
+                    Excluir
+                    </button>
+
+                    <button class="btn-whatsapp" onclick="abrirCampanhas(${index})">
+                    Enviar Campanha
+                    </button>
+
+                </div>
+
+            </td>
+
+        </tr>
+
+        `;
+
+    });
+
+    atualizarDashboard();
+
+}
+
+// SALVAR CLIENTE
+
+function salvarCliente(){
+
+    const nome = document.getElementById("nome").value;
+
+    const whatsapp = document.getElementById("whatsapp").value;
+
+    if(nome == "" || whatsapp == ""){
+
+        alert("Preencha os campos!");
+
+        return;
+
+    }
+
+    if(editando !== null){
+
+        banco[editando].nome = nome;
+        banco[editando].whatsapp = whatsapp;
+
+        editando = null;
+
+    } else {
+
+        banco.push({
+
+            id: Date.now(),
+
+            nome,
+
+            whatsapp
+
+        });
+
+    }
+
+    atualizarBanco();
+
+    renderizarTabela();
+
+    limparCampos();
+
+}
+
+// LIMPAR
+
+function limparCampos(){
+
+    document.getElementById("nome").value = "";
+    document.getElementById("whatsapp").value = "";
+
+}
+
+// EDITAR
+
+function editarCliente(index){
+
+    document.getElementById("nome").value = banco[index].nome;
+
+    document.getElementById("whatsapp").value = banco[index].whatsapp;
+
+    editando = index;
+
+}
+
+// EXCLUIR
+
+function excluirCliente(index){
+
+    if(confirm("Deseja excluir?")){
+
+        banco.splice(index,1);
+
+        atualizarBanco();
+
+        renderizarTabela();
+
+    }
+
+}
+
+// PREVIEW IMAGENS
+
+document.getElementById("imagens").addEventListener("change", function(e){
+
+    imagensSelecionadas = [];
+
+    const preview = document.getElementById("previewContainer");
+
+    preview.innerHTML = "";
+
+    Array.from(e.target.files).forEach(file => {
+
+        const reader = new FileReader();
+
+        reader.onload = function(event){
+
+            imagensSelecionadas.push(event.target.result);
+
+            const img = document.createElement("img");
+
+            img.src = event.target.result;
+
+            img.classList.add("preview");
+
+            preview.appendChild(img);
+
+        }
+
+        reader.readAsDataURL(file);
+
+    });
+
+});
+
+// SALVAR CAMPANHA
+
+function salvarCampanha(){
+
+    const nome = document.getElementById("nomeCampanha").value;
+
+    const mensagem = document.getElementById("mensagemCampanha").value;
+
+    if(nome == "" || mensagem == ""){
+
+        alert("Preencha os dados da campanha!");
+
+        return;
+
+    }
+
+    campanhas.push({
+
+        id: Date.now(),
+
+        nome,
+
+        mensagem,
+
+        imagens: imagensSelecionadas
+
+    });
+
+    atualizarCampanhas();
+
+    atualizarDashboard();
+
+    alert("Campanha salva!");
+
+}
+
+// ABRIR CAMPANHAS
+
+function abrirCampanhas(index){
+
+    if(campanhas.length == 0){
+
+        alert("Nenhuma campanha cadastrada!");
+
+        return;
+
+    }
+
+    let lista = "Escolha a campanha:\n\n";
+
+    campanhas.forEach((campanha,i)=>{
+
+        lista += `${i+1} - ${campanha.nome}\n`;
+
+    });
+
+    let escolha = prompt(lista);
+
+    if(!escolha){
+
+        return;
+
+    }
+
+    let campanha = campanhas[escolha-1];
+
+    if(!campanha){
+
+        alert("Campanha inválida!");
+
+        return;
+
+    }
+
+    let cliente = banco[index];
+
+    let numero = cliente.whatsapp.replace(/\D/g,'');
+
+    let url = `https://wa.me/55${numero}?text=${encodeURIComponent(campanha.mensagem)}`;
+
+    window.open(url,'_blank');
+
+    campanha.imagens.forEach((img,i)=>{
+
+        const link = document.createElement("a");
+
+        link.href = img;
+
+        link.download = `campanha_${i+1}.jpg`;
+
+        link.click();
+
+    });
+
+    alert(
+        "Campanha aberta para " +
+        cliente.nome +
+        "."
+    );
+
+}
+
+// EXPORTAR CSV
+
+function exportarCSV(){
+
+    let csv = "ID,Nome,WhatsApp\n";
+
+    banco.forEach(cliente=>{
+
+        csv += `${cliente.id},${cliente.nome},${cliente.whatsapp}\n`;
+
+    });
+
+    const blob = new Blob([csv], {type:"text/csv"});
+
+    const link = document.createElement("a");
+
+    link.href = URL.createObjectURL(blob);
+
+    link.download = "clientes.csv";
+
+    link.click();
+
+}
+
+// INICIAR
+
+renderizarTabela();
+
+</script>
+
+</body>
+</html>
